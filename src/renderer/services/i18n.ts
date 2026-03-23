@@ -283,7 +283,7 @@ const translations: Record<LanguageType, Record<string, string>> = {
     coworkModelSettingsHint: 'LobsterAI 使用模型设置中的当前模型与提供商配置。',
     coworkModelSettingsAction: '前往模型设置',
     modelGroupServer: '套餐模型',
-    modelGroupUser: '自配模型',
+    modelGroupUser: '自定义模型',
     modelSelectorNoModels: '请先在设置中配置模型',
     coworkApiConfigTitle: 'API 配置',
     coworkApiConfigHint: '支持 Anthropic 兼容与 OpenAI 兼容协议（OpenAI 兼容通过本地转换服务接入）。',

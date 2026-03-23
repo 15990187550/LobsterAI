@@ -124,6 +124,23 @@ function providerRequiresApiKey(providerName: string): boolean {
   return providerName !== 'ollama';
 }
 
+function tryLobsteraiServerFallback(modelId?: string): MatchedProvider | null {
+  const tokens = authTokensGetter?.();
+  const serverBaseUrl = serverBaseUrlGetter?.();
+  if (!tokens?.accessToken || !serverBaseUrl) return null;
+  const effectiveModelId = modelId?.trim() || '';
+  if (!effectiveModelId) return null;
+  const baseURL = `${serverBaseUrl}/api/proxy/v1`;
+  console.log('[ClaudeSettings] lobsterai-server fallback activated:', { baseURL, modelId: effectiveModelId });
+  return {
+    providerName: 'lobsterai-server',
+    providerConfig: { enabled: true, apiKey: tokens.accessToken, baseUrl: baseURL, apiFormat: 'openai', models: [{ id: effectiveModelId }] },
+    modelId: effectiveModelId,
+    apiFormat: 'openai',
+    baseURL,
+  };
+}
+
 function resolveMatchedProvider(appConfig: AppConfig): { matched: MatchedProvider | null; error?: string } {
   const providers = appConfig.providers ?? {};
 
@@ -154,6 +171,8 @@ function resolveMatchedProvider(appConfig: AppConfig): { matched: MatchedProvide
   if (!modelId) {
     const fallback = resolveFallbackModel();
     if (!fallback) {
+      const serverFallback = tryLobsteraiServerFallback(configuredModelId);
+      if (serverFallback) return { matched: serverFallback };
       return { matched: null, error: 'No available model configured in enabled providers.' };
     }
     modelId = fallback.modelId;
@@ -164,26 +183,9 @@ function resolveMatchedProvider(appConfig: AppConfig): { matched: MatchedProvide
 
   // Handle lobsterai-server provider: dynamically construct from auth tokens
   if (preferredProviderName === 'lobsterai-server') {
-    const tokens = authTokensGetter?.();
-    const serverBaseUrl = serverBaseUrlGetter?.();
-    if (tokens?.accessToken && serverBaseUrl) {
-      const baseURL = `${serverBaseUrl}/api/proxy/v1`;
-      console.log('[ClaudeSettings] resolveMatchedProvider lobsterai-server:', { serverBaseUrl, baseURL, modelId, apiFormat: 'openai' });
-      return {
-        matched: {
-          providerName: 'lobsterai-server',
-          providerConfig: {
-            enabled: true,
-            apiKey: tokens.accessToken,
-            baseUrl: baseURL,
-            apiFormat: 'openai',
-            models: [{ id: modelId }],
-          },
-          modelId,
-          apiFormat: 'openai',
-          baseURL,
-        },
-      };
+    const serverMatch = tryLobsteraiServerFallback(modelId);
+    if (serverMatch) {
+      return { matched: serverMatch };
     }
   }
 
@@ -212,6 +214,8 @@ function resolveMatchedProvider(appConfig: AppConfig): { matched: MatchedProvide
       modelId = fallback.modelId;
       providerEntry = [fallback.providerName, fallback.providerConfig];
     } else {
+      const serverFallback = tryLobsteraiServerFallback(modelId);
+      if (serverFallback) return { matched: serverFallback };
       return { matched: null, error: `No enabled provider found for model: ${modelId}` };
     }
   }
@@ -260,10 +264,14 @@ function resolveMatchedProvider(appConfig: AppConfig): { matched: MatchedProvide
   }
 
   if (!baseURL) {
+    const serverFallback = tryLobsteraiServerFallback(modelId);
+    if (serverFallback) return { matched: serverFallback };
     return { matched: null, error: `Provider ${providerName} is missing base URL.` };
   }
 
   if (apiFormat === 'anthropic' && providerRequiresApiKey(providerName) && !providerConfig.apiKey?.trim()) {
+    const serverFallback = tryLobsteraiServerFallback(modelId);
+    if (serverFallback) return { matched: serverFallback };
     return { matched: null, error: `Provider ${providerName} requires API key for Anthropic-compatible mode.` };
   }
 

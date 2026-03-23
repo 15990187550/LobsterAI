@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from './store';
+import { RootState, store } from './store';
 import Settings, { type SettingsOpenOptions } from './components/Settings';
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
@@ -141,10 +141,13 @@ const App: React.FC = () => {
         const resolvedModels = providerModels.length > 0 ? providerModels : fallbackModels;
         if (resolvedModels.length > 0) {
           dispatch(setAvailableModels(resolvedModels));
-          const preferredModel = resolvedModels.find(
+          // Search all available models (including server models loaded by authService)
+          // so that a previously selected server model is correctly restored.
+          const allModels = store.getState().model.availableModels;
+          const preferredModel = allModels.find(
             model => model.id === config.model.defaultModel
               && (!config.model.defaultModelProvider || model.providerKey === config.model.defaultModelProvider)
-          ) ?? resolvedModels[0];
+          ) ?? allModels[0];
           dispatch(setSelectedModel(preferredModel));
         }
 

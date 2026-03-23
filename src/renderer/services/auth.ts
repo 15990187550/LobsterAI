@@ -148,13 +148,14 @@ class AuthService {
     try {
       const modelsResult = await window.electron.auth.getModels();
       if (modelsResult.success && modelsResult.models) {
-        const serverModels: Model[] = modelsResult.models.map((m: { modelId: string; modelName: string; provider: string; apiFormat: string }) => ({
+        const serverModels: Model[] = modelsResult.models.map((m: { modelId: string; modelName: string; provider: string; apiFormat: string; supportsImage?: boolean }) => ({
           id: m.modelId,
           name: m.modelName,
           provider: m.provider,
           providerKey: 'lobsterai-server',
           isServerModel: true,
           serverApiFormat: m.apiFormat,
+          supportsImage: m.supportsImage ?? false,
         }));
         store.dispatch(setServerModels(serverModels));
       }
